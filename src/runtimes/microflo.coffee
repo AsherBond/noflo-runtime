@@ -28,6 +28,39 @@ class MicroFloRuntime extends Base
   connect: ->
     unless @container
       throw new Exception 'Unable to connect without a parent element'
+ 
+#    window.require 'microflo-runtime', (Module) ->
+#        console.log 'Emscripten stuff loaded', simulator
+
+    c = document.createElement 'object'
+    c.setAttribute 'type', "image/svg+xml"
+    c.setAttribute 'data', "simulator/assets/controller_arduino_uno_r3.svg"
+    c.id = 'controller'
+    c.innerHTML = 'No SVG support!'
+    @container.appendChild c
+
+    setLed = (On) ->
+        controller = document.getElementById("controller").contentDocument;
+        controller = c.contentDocument;
+        ledLight = controller.getElementById "pin13led-light"
+        ledLight.setAttributeNS null, 'opacity', On ? '1' : '0'
+
+    runtime = Module['_emscripten_runtime_new']()
+    setInterval( () ->
+        Module['_emscripten_runtime_run'] runtime
+    , 100)
+
+    Module["print"] = (str) ->
+      console.log(str);
+
+      # HACK: use a custom I/O backend instead, communicate via host-transport
+      tok = str.split " "
+      if tok.length > 3 && tok[2].indexOf("::DigitalWrite") != -1
+        pin = tok[5].replace("pin=","").replace(",","")
+        pin = parseInt pin
+        state = tok[6] == "value=ON"
+        if pin == 13
+          setLed state
 
     # Let the UI know we're connecting
     @connecting = true
